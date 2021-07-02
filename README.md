@@ -2,7 +2,7 @@
 
 [![build](https://github.com/TransparentLC/wasm-c20p1305/actions/workflows/build.yml/badge.svg)](https://github.com/TransparentLC/wasm-c20p1305/actions/workflows/build.yml)
 
-使用 WASM 运行的 ChaCha20Poly1305 算法，预编译版可在 [Actions](https://github.com/TransparentLC/wasm-c20p1305/actions/workflows/build.yml) 或 [nightly.link](https://nightly.link/TransparentLC/wasm-c20p1305/workflows/build/master/wasm-aes) 下载。
+使用 WASM 运行的 ChaCha20Poly1305 算法，预编译版可在 [Actions](https://github.com/TransparentLC/wasm-c20p1305/actions/workflows/build.yml) 或 [nightly.link](https://nightly.link/TransparentLC/wasm-c20p1305/workflows/build/master/wasm-c20p1305) 下载。
 
 ChaCha20 的实现来自 [Ginurx/chacha20-c](https://github.com/Ginurx/chacha20-c)，Poly1305 的实现来自 [floodyberry/poly1305-donna](https://github.com/floodyberry/poly1305-donna)。加密和解密结果和 Node.js 自带的 `crypto` 模块相同。
 
