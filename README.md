@@ -6,6 +6,8 @@
 
 ChaCha20 的实现来自 [Ginurx/chacha20-c](https://github.com/Ginurx/chacha20-c)，Poly1305 的实现来自 [floodyberry/poly1305-donna](https://github.com/floodyberry/poly1305-donna)。加密和解密结果和 Node.js 自带的 `crypto` 模块相同。
 
+> Chrome 和其他使用 Chromium 内核的浏览器限制了使用 `WebAssembly.Module` **同步加载**的 WASM 模块[不能大于 4 KB](https://github.com/webpack/webpack/issues/6475)，不过由于这里的 WASM 文件小于 4 KB，所以直接使用同步加载也没有问题。
+
 ## 使用方式
 
 ```js
@@ -117,9 +119,9 @@ console.log(plaintext.every((e, i) => e === decrypted[i]));
 
 注意事项：
 
-* 请不要在同一个对象上同时进行加密和解密操作（要么只调用 `encrypt` 和 `mac`，要么只调用 `decrypt` 和 `verify`）。
-* 每个对象只能对一段数据加密或解密一遍，不能再用于加密或解密另一段数据。
-* 对于同一段数据，可以分成块后多次调用 `encrypt` 或 `decrypt` 进行加密或解密。
+* 请不要在同一个对象上**同时进行加密和解密操作**（要么只调用 `encrypt` 和 `mac`，要么只调用 `decrypt` 和 `verify`）。
+* 每个对象只能对**一段**数据加密或解密**一遍**，不能再用于加密或解密另一段数据。
+* 对于同一段数据，可以分成块后依次调用 `encrypt` 或 `decrypt` 进行加密或解密。
 
 ## 编译
 
