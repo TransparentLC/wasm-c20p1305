@@ -1,0 +1,29 @@
+name: build
+
+on:
+  workflow_dispatch:
+  push:
+    branches:
+      - master
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v2
+      - name: Setup Emscripten
+        uses: mymindstorm/setup-emsdk@v7
+        with:
+          version: latest
+          no-cache: true
+      - name: Install dependencies
+        run: npm install -g terser
+      - name: Build wasm-c20p1305
+        run: node build.js
+      - name: Test and benchmark
+        run: node benchmark.js
+      - name: Upload result
+        uses: actions/upload-artifact@v2
+        with:
+          name: wasm-c20p1305
+          path: dist/
