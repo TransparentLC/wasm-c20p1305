@@ -9,8 +9,8 @@ if (typeof atob === 'undefined') {
 const { performance } = require('perf_hooks');
 
 const crypto = require('crypto');
-const c20p1305WasmSize = require('./dist/c20p1305-wasm.size.js');
-const c20p1305WasmSpeed = require('./dist/c20p1305-wasm.speed.js');
+const c20p1305WasmSize = require('./dist/c20p1305-wasm.size.min.js');
+const c20p1305WasmSpeed = require('./dist/c20p1305-wasm.speed.min.js');
 const { ChaCha20Poly1305: c20p1305VanillaJS } = require('./vanilla/chacha20poly1305.min.js');
 
 const result = [];

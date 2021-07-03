@@ -45,7 +45,7 @@ for (const [optimizeMode, optimizeParam] of [
     console.log(emscriptenProcess.output.toString());
     fs.unlinkSync(`c20p1305-${uniqueId}.c`);
     fs.unlinkSync(`c20p1305-wasm-template-${uniqueId}.js`);
-    rc.mapping.set('$$WASM_BASE64$$', fs.readFileSync(`dist/c20p1305.${optimizeMode}.wasm`, { encoding: 'base64' }));
+    rc.mapping.set('$$WASM_BASE64$$', fs.readFileSync(`dist/c20p1305.${optimizeMode}.wasm`, { encoding: 'base64' }).replace(/=+$/g, ''));
 
     fs.writeFileSync(
         `dist/c20p1305-wasm.${optimizeMode}.js`,
