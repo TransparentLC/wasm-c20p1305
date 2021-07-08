@@ -8,14 +8,43 @@ const {
     WebAssembly,
 } = GLOBAL;
 
-/** @typedef {Number} Pointer */
-
-/** @type {WebAssembly.Module} */
-const cachedModule = new WebAssembly.Module(Uint8Array.from(atob('$$WASM_BASE64$$'), e => e.charCodeAt()));
+const wasmMemory = new WebAssembly.Memory({
+    'initial': 1,
+});
+const wasmHeapU8 = new Uint8Array(wasmMemory.buffer);
 const $memoryTotalLength = 0x10000;
-const $memoryStackPointer = 0x00DFF;
+const $memoryStackPointer = 0x00E00;
 const $memoryCryptContext = 0x00E00;
 const $memoryFreeArea = 0x01000;
+const $memoryCryptContextLength = 336;
+
+/** @typedef {Number} Pointer */
+
+/** @type {WebAssembly.Exports} */
+/**
+ * @type {{
+ *  $$WASMEXPORTS_c20p1305_ctx_init$$(ctx: Pointer, key: Pointer, nonce: Pointer, auth: Pointer, authLength: Number) => void,
+ *  $$WASMEXPORTS_c20p1305_encrypt$$(ctx: Pointer, data: Pointer, dataLength: Number) => void,
+ *  $$WASMEXPORTS_c20p1305_decrypt$$(ctx: Pointer, data: Pointer, dataLength: Number) => void,
+ *  $$WASMEXPORTS_c20p1305_finish$$(ctx: Pointer, mac: Pointer) => void,
+ * }}
+ */
+const wasmExports = new WebAssembly.Instance(
+    new WebAssembly.Module(Uint8Array.from(atob('$$WASM_BASE64$$'), e => e.charCodeAt())),
+    {
+        'env': {
+            'memory': wasmMemory,
+            '__memory_base': 0x0000,
+            '__stack_pointer': new WebAssembly.Global(
+                {
+                    'mutable': true,
+                    'value': 'i32',
+                },
+                $memoryStackPointer,
+            ),
+        },
+    }
+).exports;
 
 class ChaCha20Poly1305 {
     /**
@@ -24,43 +53,25 @@ class ChaCha20Poly1305 {
      * @param {Uint8Array} aad any length
      */
     constructor(key, nonce, aad) {
-        const memory = new WebAssembly.Memory({
-            'initial': 1,
-        });
-        const heapU8 = this.heapU8 = new Uint8Array(memory.buffer);
-        /** @type {WebAssembly.Exports} */
-        /**
-         * @type {{
-         *  $$WASMEXPORTS_c20p1305_ctx_init$$(ctx: Pointer, key: Pointer, nonce: Pointer, auth: Pointer, authLength: Number) => void,
-         *  $$WASMEXPORTS_c20p1305_encrypt$$(ctx: Pointer, data: Pointer, dataLength: Number) => void,
-         *  $$WASMEXPORTS_c20p1305_decrypt$$(ctx: Pointer, data: Pointer, dataLength: Number) => void,
-         *  $$WASMEXPORTS_c20p1305_finish$$(ctx: Pointer, mac: Pointer) => void,
-         * }}
-         */
-        this.wasmExports = new WebAssembly.Instance(cachedModule, {
-            'env': {
-                'memory': memory,
-                '__memory_base': 0x0000,
-                '__stack_pointer': new WebAssembly.Global(
-                    {
-                        'mutable': true,
-                        'value': 'i32',
-                    },
-                    $memoryStackPointer,
-                ),
-            },
-        }).exports;
-
-        heapU8.set(key, $memoryFreeArea);
-        heapU8.set(nonce, $memoryFreeArea + 32);
-        heapU8.set(aad, $memoryFreeArea + 32 + 12);
-        this.wasmExports['$$WASMEXPORTS_c20p1305_ctx_init$$'](
+        wasmHeapU8.set(key, $memoryFreeArea);
+        wasmHeapU8.set(nonce, $memoryFreeArea + 32);
+        wasmHeapU8.set(aad, $memoryFreeArea + 32 + 12);
+        wasmExports['$$WASMEXPORTS_c20p1305_ctx_init$$'](
             $memoryCryptContext,
             $memoryFreeArea,
             $memoryFreeArea + 32,
             $memoryFreeArea + 32 + 12,
             aad.length,
         );
+        this.cryptContext = wasmHeapU8.slice($memoryCryptContext, $memoryCryptContext + $memoryCryptContextLength);
+    }
+
+    // saveContext() {
+    //     this.cryptContext.set(wasmHeapU8.subarray($memoryCryptContext, $memoryCryptContext + $memoryCryptContextLength));
+    // }
+
+    loadContext() {
+        wasmHeapU8.set(this.cryptContext, $memoryCryptContext);
     }
 
     /**
@@ -69,17 +80,19 @@ class ChaCha20Poly1305 {
      * @returns {Uint8Array}
      */
     crypt(func, data) {
+        this.loadContext();
         const dataLength = data.length;
         const result = new Uint8Array(dataLength);
-        const heapU8 = this.heapU8;
         let cryptedLength = 0;
         while (cryptedLength < dataLength) {
             const sliceLength = Math.min(dataLength - cryptedLength, $memoryTotalLength - $memoryFreeArea);
-            heapU8.set(data.subarray(cryptedLength, cryptedLength + sliceLength), $memoryFreeArea);
+            wasmHeapU8.set(data.subarray(cryptedLength, cryptedLength + sliceLength), $memoryFreeArea);
             func($memoryCryptContext, $memoryFreeArea, sliceLength);
-            result.set(heapU8.subarray($memoryFreeArea, $memoryFreeArea + sliceLength), cryptedLength);
+            result.set(wasmHeapU8.subarray($memoryFreeArea, $memoryFreeArea + sliceLength), cryptedLength);
             cryptedLength += sliceLength;
         }
+        // this.saveContext();
+        this.cryptContext.set(wasmHeapU8.subarray($memoryCryptContext, $memoryCryptContext + $memoryCryptContextLength));
         return result;
     }
 
@@ -88,7 +101,7 @@ class ChaCha20Poly1305 {
      * @returns {Uint8Array}
      */
     'encrypt'(data) {
-        return this.crypt(this.wasmExports['$$WASMEXPORTS_c20p1305_encrypt$$'], data);
+        return this.crypt(wasmExports['$$WASMEXPORTS_c20p1305_encrypt$$'], data);
     }
 
     /**
@@ -96,15 +109,16 @@ class ChaCha20Poly1305 {
      * @returns {Uint8Array}
      */
     'decrypt'(data) {
-        return this.crypt(this.wasmExports['$$WASMEXPORTS_c20p1305_decrypt$$'], data);
+        return this.crypt(wasmExports['$$WASMEXPORTS_c20p1305_decrypt$$'], data);
     }
 
     /**
      * @returns {Uint8Array}
      */
     'mac'() {
-        this.wasmExports['$$WASMEXPORTS_c20p1305_finish$$']($memoryCryptContext, $memoryFreeArea);
-        return new Uint8Array(this.heapU8.subarray($memoryFreeArea, $memoryFreeArea + 16));
+        this.loadContext();
+        wasmExports['$$WASMEXPORTS_c20p1305_finish$$']($memoryCryptContext, $memoryFreeArea);
+        return wasmHeapU8.slice($memoryFreeArea, $memoryFreeArea + 16);
     }
 
     /**
@@ -112,6 +126,7 @@ class ChaCha20Poly1305 {
      * @returns {Boolean}
      */
     'verify'(mac) {
+        this.loadContext();
         const m = this['mac']();
         let result = 0;
         let i = 16;

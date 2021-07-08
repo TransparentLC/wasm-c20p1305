@@ -17,15 +17,11 @@
 // https://tex2e.github.io/blog/media/post/tikz/chacha20poly1305/chacha20poly1305-enc.png
 // https://tex2e.github.io/blog/media/post/tikz/chacha20poly1305/chacha20poly1305-dec.png
 
-// 352 bytes
+// 336 bytes
 struct c20p1305_ctx {
-    // 184 bytes
     struct chacha20_context c_ctx;
-    // 140 bytes
     struct poly1305_context p_ctx;
-    // 8 bytes
     size_t auth_length;
-    // 8 bytes
     size_t data_length;
 };
 

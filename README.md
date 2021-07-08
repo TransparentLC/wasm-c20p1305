@@ -2,7 +2,7 @@
 
 [![build](https://github.com/TransparentLC/wasm-c20p1305/actions/workflows/build.yml/badge.svg)](https://github.com/TransparentLC/wasm-c20p1305/actions/workflows/build.yml)
 
-使用 WASM 运行的 ChaCha20Poly1305 算法，预编译版可在 [Actions](https://github.com/TransparentLC/wasm-c20p1305/actions/workflows/build.yml) 或 [nightly.link](https://nightly.link/TransparentLC/wasm-c20p1305/workflows/build/master/wasm-c20p1305) 下载。
+使用 WASM 运行的 ChaCha20Poly1305 算法，预编译版可在 [Actions](https://github.com/TransparentLC/wasm-c20p1305/actions/workflows/build.yml) 或 [Releases](https://github.com/TransparentLC/wasm-c20p1305/releases) 下载。
 
 ChaCha20 的实现来自 [Ginurx/chacha20-c](https://github.com/Ginurx/chacha20-c)，Poly1305 的实现来自 [floodyberry/poly1305-donna](https://github.com/floodyberry/poly1305-donna)。加密和解密结果和 Node.js 自带的 `crypto` 模块相同。
 
@@ -121,6 +121,7 @@ console.log(plaintext.every((e, i) => e === decrypted[i]));
 
 * 请不要在同一个对象上**同时进行加密和解密操作**（要么只调用 `encrypt` 和 `mac`，要么只调用 `decrypt` 和 `verify`）。
 * 每个对象只能对**一段**数据加密或解密**一遍**，不能再用于加密或解密另一段数据。
+* 每个对象调用 `mac` 或 `verify` 后，就不能再调用 `encrypt` 和 `decrypt`。
 * 对于同一段数据，可以分成块后依次调用 `encrypt` 或 `decrypt` 进行加密或解密。
 
 ## 编译
@@ -136,10 +137,13 @@ node build.js
 
 * `c20p1305.{mode}.wasm`
 * `c20p1305-wasm.{mode}.js`
+* `c20p1305-wasm.{mode}.d.ts`
 * `c20p1305-wasm.{mode}.min.js`
-* `c20p1305-wasm.{mode}.min.js.map`
+* `c20p1305-wasm.{mode}.min.d.ts`
 
 `{mode}` 是 size 和 speed 之一，对应文件大小或运行速度的优化（也就是 Emscripten 编译时使用的 `-Oz` 或 `-O3` 参数）。使用时在浏览器 / Node.js 中加载 JS 文件即可，WASM 文件可以不保留。
+
+> 实际上 speed 比 size 大不了多少，但是速度是 size 的 2.5x 以上，所以还是选 speed 吧 (っ'ω')っ
 
 ## 测试
 

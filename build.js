@@ -15,35 +15,37 @@ for (const [optimizeMode, optimizeParam] of [
         $$WASM_BASE64$$: null,
     });
     for (const f of [
-        'c20p1305.c',
+        'src/c20p1305.c',
         'c20p1305-wasm-template.js',
     ]) {
         rc.collect(fs.readFileSync(f, { encoding: 'utf-8' }));
     }
 
     fs.writeFileSync(
-        `c20p1305-${uniqueId}.c`,
-        rc.applyReplace(fs.readFileSync('c20p1305.c', { encoding: 'utf-8' }))
+        `src/c20p1305-${uniqueId}.c`,
+        rc.applyReplace(fs.readFileSync('src/c20p1305.c', { encoding: 'utf-8' }))
     );
     fs.writeFileSync(
         `c20p1305-wasm-template-${uniqueId}.js`,
         rc.applyReplace(fs.readFileSync('c20p1305-wasm-template.js', { encoding: 'utf-8' }))
     );
-    const emscriptenProcess = childProcess.spawnSync(
+    childProcess.spawnSync(
         'emcc',
         [
-            `c20p1305-${uniqueId}.c`,
-            'chacha20.c',
-            'memset.c',
-            'poly1305-donna.c',
+            `src/c20p1305-${uniqueId}.c`,
+            'src/chacha20.c',
+            'src/memset.c',
+            'src/poly1305-donna.c',
             optimizeParam,
             '-v',
             '-s', 'SIDE_MODULE=2',
             '-o', `dist/c20p1305.${optimizeMode}.wasm`,
         ],
+        {
+            stdio: ['ignore', 1, 2],
+        }
     );
-    console.log(emscriptenProcess.output.toString());
-    fs.unlinkSync(`c20p1305-${uniqueId}.c`);
+    fs.unlinkSync(`src/c20p1305-${uniqueId}.c`);
     fs.unlinkSync(`c20p1305-wasm-template-${uniqueId}.js`);
     rc.mapping.set('$$WASM_BASE64$$', fs.readFileSync(`dist/c20p1305.${optimizeMode}.wasm`, { encoding: 'base64' }).replace(/=+$/g, ''));
 
@@ -51,7 +53,8 @@ for (const [optimizeMode, optimizeParam] of [
         `dist/c20p1305-wasm.${optimizeMode}.js`,
         rc.applyReplace(fs.readFileSync('c20p1305-wasm-template.js', { encoding: 'utf-8' }))
     );
-    const terserProcess = childProcess.spawnSync(
+    fs.copyFileSync('c20p1305-wasm-template.d.ts', `dist/c20p1305-wasm.${optimizeMode}.d.ts`);
+    childProcess.spawnSync(
         'terser',
         [
             '--ecma', '2020',
@@ -59,10 +62,12 @@ for (const [optimizeMode, optimizeParam] of [
             '--mangle',
             '--mangle-props', 'keep_quoted=strict',
             '--comments', 'false',
-            '--source-map', `url="c20p1305-wasm.${optimizeMode}.min.js.map"`,
             '--output', `dist/c20p1305-wasm.${optimizeMode}.min.js`,
             `dist/c20p1305-wasm.${optimizeMode}.js`,
         ],
+        {
+            stdio: ['ignore', 1, 2],
+        }
     );
-    console.log(terserProcess.output.toString());
+    fs.copyFileSync('c20p1305-wasm-template.d.ts', `dist/c20p1305-wasm.${optimizeMode}.min.d.ts`);
 }
