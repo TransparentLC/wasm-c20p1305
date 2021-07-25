@@ -6,8 +6,6 @@
 
 ChaCha20 的实现来自 [Ginurx/chacha20-c](https://github.com/Ginurx/chacha20-c)，Poly1305 的实现来自 [floodyberry/poly1305-donna](https://github.com/floodyberry/poly1305-donna)。加密和解密结果和 Node.js 自带的 `crypto` 模块相同。
 
-> Chrome 和其他使用 Chromium 内核的浏览器限制了使用 `WebAssembly.Module` **同步加载**的 WASM 模块[不能大于 4 KB](https://github.com/webpack/webpack/issues/6475)，不过由于这里的 WASM 文件小于 4 KB，所以直接使用同步加载也没有问题。
-
 ## 使用方式
 
 ```js
@@ -41,6 +39,9 @@ class ChaCha20Poly1305 {
      * @returns {Boolean} 解密后的消息是否通过认证
      */
     verify(mac) {}
+
+    /** @type {Promise<void>} 在WASM模块加载完成后fulfill的Promise */
+    static ready,
 }
 ```
 <details>
@@ -58,6 +59,12 @@ if (typeof atob === 'undefined') {
 
 // 在浏览器中加载时，名称为ChaCha20Poly1305
 const ChaCha20Poly1305 = require('./dist/c20p1305-wasm.speed.min.js');
+
+(async () => {
+
+// 等待WASM模块异步加载完成
+// 也可以使用ChaCha20Poly1305.ready.then(() => {...})
+await ChaCha20Poly1305.ready;
 
 // 以下的测试向量来自 https://datatracker.ietf.org/doc/html/rfc7539#section-2.8.2
 
@@ -113,6 +120,8 @@ const decrypted = decryptor.decrypt(encrypted);
 console.log(decryptor.verify(mac));
 // true
 console.log(plaintext.every((e, i) => e === decrypted[i]));
+
+})()
 ```
 
 </details>

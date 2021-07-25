@@ -4,4 +4,5 @@ export = class ChaCha20Poly1305 {
     decrypt(data: Uint8Array): Uint8Array
     mac(): Uint8Array
     verify(mac: Uint8Array): Boolean
+    static ready: Promise<void>
 }

@@ -11,7 +11,16 @@ const { performance } = require('perf_hooks');
 const crypto = require('crypto');
 const c20p1305WasmSize = require('./dist/c20p1305-wasm.size.min.js');
 const c20p1305WasmSpeed = require('./dist/c20p1305-wasm.speed.min.js');
+// const c20p1305WasmSimd = require('./dist/c20p1305-wasm.simd.min.js');
 const { ChaCha20Poly1305: c20p1305VanillaJS } = require('./vanilla/chacha20poly1305.min.js');
+
+(async () => {
+
+await Promise.all([
+    c20p1305WasmSize.ready,
+    c20p1305WasmSpeed.ready,
+    // c20p1305WasmSimd.ready,
+]);
 
 const result = [];
 
@@ -43,6 +52,7 @@ for (const [name, c20p1305] of [
     ['vanilla-js', c20p1305VanillaJS],
     ['wasm-size', c20p1305WasmSize],
     ['wasm-speed', c20p1305WasmSpeed],
+    // ['wasm-simd', c20p1305WasmSimd],
 ]) {
     start = performance.now();
     const cipher = new c20p1305(key, nonce, aad);
@@ -81,3 +91,5 @@ for (const [name, c20p1305] of [
 result.push(nodeResult);
 result.forEach(e => e.ratio = e.speed / vanillaSpeed);
 console.table(result);
+
+})();

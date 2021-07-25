@@ -29,22 +29,30 @@ const $memoryCryptContextLength = 336;
  *  $$WASMEXPORTS_c20p1305_finish$$(ctx: Pointer, mac: Pointer) => void,
  * }}
  */
-const wasmExports = new WebAssembly.Instance(
-    new WebAssembly.Module(Uint8Array.from(atob('$$WASM_BASE64$$'), e => e.charCodeAt())),
-    {
-        'env': {
-            'memory': wasmMemory,
-            '__memory_base': 0x0000,
-            '__stack_pointer': new WebAssembly.Global(
-                {
-                    'mutable': true,
-                    'value': 'i32',
-                },
-                $memoryStackPointer,
-            ),
-        },
-    }
-).exports;
+let wasmExports;
+/** @type {Promise<void>} */
+const wasmReady = new Promise(resolve => WebAssembly
+    .instantiate(
+        Uint8Array.from(atob('$$WASM_BASE64$$'), e => e.charCodeAt()),
+        {
+            'env': {
+                'memory': wasmMemory,
+                '__memory_base': 0x0000,
+                '__stack_pointer': new WebAssembly.Global(
+                    {
+                        'mutable': true,
+                        'value': 'i32',
+                    },
+                    $memoryStackPointer,
+                ),
+            },
+        }
+    )
+    .then(result => {
+        wasmExports = result['instance']['exports'];
+        resolve();
+    })
+);
 
 class ChaCha20Poly1305 {
     /**
@@ -134,6 +142,8 @@ class ChaCha20Poly1305 {
         return !result;
     }
 }
+
+ChaCha20Poly1305['ready'] = wasmReady;
 
 if (typeof module !== 'undefined') {
     module.exports = ChaCha20Poly1305;
