@@ -41,7 +41,7 @@ class ChaCha20Poly1305 {
     verify(mac) {}
 
     /** @type {Promise<void>} 在WASM模块加载完成后fulfill的Promise */
-    static ready,
+    static ready
 }
 ```
 <details>
