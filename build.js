@@ -8,7 +8,7 @@ await fs.promises.rmdir('dist', { recursive: true });
 await fs.promises.mkdir('dist');
 
 await Promise.all([
-    // ['simd', '-O3', '-msimd128'],
+    // ['simd', '-O3', '-msimd128', '-DWASM_SIMD_COMPAT_SLOW'],
     ['speed', '-O3'],
     ['size', '-Oz'],
 ].map(async e => {

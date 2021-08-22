@@ -68,7 +68,7 @@ Terser option:
     passes: 2,
   },
   mangle: {
-  	properties: {
+    properties: {
       keep_quoted: 'strict',
     },
   },

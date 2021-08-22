@@ -8,29 +8,29 @@
 /* poly1305 implementation using 32 bit * 32 bit = 64 bit multiplication and 64 bit addition */
 
 #if defined(_MSC_VER)
-	#define POLY1305_NOINLINE __declspec(noinline)
+    #define POLY1305_NOINLINE __declspec(noinline)
 #elif defined(__GNUC__)
-	#define POLY1305_NOINLINE __attribute__((noinline))
+    #define POLY1305_NOINLINE __attribute__((noinline))
 #else
-	#define POLY1305_NOINLINE
+    #define POLY1305_NOINLINE
 #endif
 
 #define poly1305_block_size 16
 
 // 140 bytes
 typedef struct poly1305_context {
-	size_t aligner;
-	unsigned char opaque[136];
+    size_t aligner;
+    unsigned char opaque[136];
 } poly1305_context;
 
 /* 17 + sizeof(size_t) + 14*sizeof(unsigned long) */
 typedef struct poly1305_state_internal_t {
-	unsigned long r[5];
-	unsigned long h[5];
-	unsigned long pad[4];
-	size_t leftover;
-	unsigned char buffer[poly1305_block_size];
-	unsigned char final;
+    unsigned long r[5];
+    unsigned long h[5];
+    unsigned long pad[4];
+    size_t leftover;
+    unsigned char buffer[poly1305_block_size];
+    unsigned char final;
 } poly1305_state_internal_t;
 
 static void poly1305_blocks(poly1305_state_internal_t *st, const unsigned char *m, size_t bytes);
