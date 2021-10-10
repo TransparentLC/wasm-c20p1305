@@ -138,7 +138,7 @@ console.log(plaintext.every((e, i) => e === decrypted[i]));
 需要安装 [Emscripten](https://emscripten.org) 和 [Node.js](https://nodejs.org) 环境。
 
 ```bash
-npm install -g terser
+npm install terser
 node build.js
 ```
 
