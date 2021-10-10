@@ -4,10 +4,10 @@
 #include "poly1305-donna.h"
 
 #include "emscripten-exports.h"
-#define c20p1305_ctx_init $$WASMEXPORTS_c20p1305_ctx_init$$
-#define c20p1305_encrypt $$WASMEXPORTS_c20p1305_encrypt$$
-#define c20p1305_decrypt $$WASMEXPORTS_c20p1305_decrypt$$
-#define c20p1305_finish $$WASMEXPORTS_c20p1305_finish$$
+#define c20p1305_ctx_init __WASMEXPORTS_c20p1305_ctx_init__
+#define c20p1305_encrypt __WASMEXPORTS_c20p1305_encrypt__
+#define c20p1305_decrypt __WASMEXPORTS_c20p1305_decrypt__
+#define c20p1305_finish __WASMEXPORTS_c20p1305_finish__
 
 // c20p1305就是chacha20poly1305的简写了
 

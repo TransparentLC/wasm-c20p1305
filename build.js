@@ -1,11 +1,14 @@
 const childProcess = require('child_process');
 const fs = require('fs');
-const ReplacementCollector = require('./replacement-collector.js');
+const terser = require('terser');
+const ReplacementCollector = require('./src/replacement-collector.js');
 
 (async () => {
 
 await fs.promises.rmdir('dist', { recursive: true });
 await fs.promises.mkdir('dist');
+
+const template = await fs.promises.readFile('src/c20p1305-wasm-template.js', { encoding: 'utf-8' });
 
 await Promise.all([
     // ['simd', '-O3', '-msimd128', '-DWASM_SIMD_COMPAT_SLOW'],
@@ -14,62 +17,78 @@ await Promise.all([
 ].map(async e => {
     const [optimizeMode, optimizeParam, ...otherParam] = e;
 
-    const uniqueId = Math.random().toString(36).slice(2, 10);
-    const rc = new ReplacementCollector(/\$\$.+?\$\$/g, {
-        $$UNIQUE_ID$$: uniqueId,
-        $$WASM_BASE64$$: null,
+    const rc = new ReplacementCollector(/__.+?__/g, {
+        __WASM_BASE64__: null,
     });
     await Promise.all([
-        'src/c20p1305.c',
-        'c20p1305-wasm-template.js',
-    ].map(async f => rc.collect(await fs.promises.readFile(f, { encoding: 'utf-8' }))));
+        'src/wasm/c20p1305.c',
+        'src/c20p1305-wasm-template.js',
+    ].map(f => fs.promises.readFile(f, { encoding: 'utf-8' }).then(e => rc.collect(e))));
 
-    await fs.promises.writeFile(
-        `src/c20p1305-${uniqueId}.c`,
-        rc.applyReplace(await fs.promises.readFile('src/c20p1305.c', { encoding: 'utf-8' }))
-    );
-    await fs.promises.writeFile(
-        `c20p1305-wasm-template-${uniqueId}.js`,
-        rc.applyReplace(await fs.promises.readFile('c20p1305-wasm-template.js', { encoding: 'utf-8' }))
-    );
     console.log(`${optimizeMode} emcc output:\n`, await new Promise((resolve, reject) => childProcess.execFile(
         'emcc',
         [
-            `src/c20p1305-${uniqueId}.c`,
-            'src/chacha20.c',
-            'src/memset.c',
-            'src/poly1305-donna.c',
+            'src/wasm/c20p1305.c',
+            'src/wasm/chacha20.c',
+            'src/wasm/memset.c',
+            'src/wasm/poly1305-donna.c',
             optimizeParam,
             ...otherParam,
+            ...rc.exportEmscriptenDefine(),
             '-v',
             '-s', 'SIDE_MODULE=2',
             '-o', `dist/c20p1305.${optimizeMode}.wasm`,
         ],
         (error, stdout, stderr) => error ? reject(error) : resolve(stderr)
     )));
-    await fs.promises.unlink(`src/c20p1305-${uniqueId}.c`);
-    await fs.promises.unlink(`c20p1305-wasm-template-${uniqueId}.js`);
-    rc.mapping.set('$$WASM_BASE64$$', (await fs.promises.readFile(`dist/c20p1305.${optimizeMode}.wasm`, { encoding: 'base64' })).replace(/=+$/g, ''));
+    rc.mapping.set('__WASM_BASE64__', (await fs.promises.readFile(`dist/c20p1305.${optimizeMode}.wasm`, { encoding: 'base64' })).replace(/=+$/g, ''));
 
-    await fs.promises.writeFile(
-        `dist/c20p1305-wasm.${optimizeMode}.js`,
-        rc.applyReplace(await fs.promises.readFile('c20p1305-wasm-template.js', { encoding: 'utf-8' }))
-    );
-    await fs.promises.copyFile('c20p1305-wasm-template.d.ts', `dist/c20p1305-wasm.${optimizeMode}.d.ts`);
-    console.log(`${optimizeMode} terser output:\n`, await new Promise((resolve, reject) => childProcess.execFile(
-        'terser',
-        [
-            '--ecma', '2020',
-            '--compress', 'unsafe_math,unsafe_methods,unsafe_proto,unsafe_regexp,unsafe_undefined,passes=2',
-            '--mangle',
-            '--mangle-props', 'keep_quoted=strict',
-            '--comments', 'false',
-            '--output', `dist/c20p1305-wasm.${optimizeMode}.min.js`,
-            `dist/c20p1305-wasm.${optimizeMode}.js`,
-        ],
-        (error, stdout, stderr) => error ? reject(error) : resolve(stderr)
-    )));
-    await fs.promises.copyFile('c20p1305-wasm-template.d.ts', `dist/c20p1305-wasm.${optimizeMode}.min.d.ts`);
+    await Promise.all(['cjs', 'esm'].map(async moduleFormat => {
+        const wrappedTemplate = (await fs.promises.readFile(`src/wrapper/${moduleFormat}.js`, { encoding: 'utf-8' })).replace(/\/\*\* TEMPLATE \*\*\//g, template);
+        return Promise.all([
+            terser.minify(wrappedTemplate, {
+                ecma: 2020,
+                compress: {
+                    defaults: false,
+                    global_defs: rc.exportTerserDefine(),
+                },
+                mangle: false,
+                format: {
+                    beautify: true,
+                    comments: 'all',
+                },
+            })
+                .then(e => fs.promises.writeFile(`dist/c20p1305-wasm.${optimizeMode}.${moduleFormat}.js`, e.code))
+                .catch(console.log),
+            terser.minify(wrappedTemplate, {
+                ecma: 2020,
+                module: moduleFormat === 'esm',
+                compress: {
+                    passes: 2,
+                    unsafe_math: true,
+                    unsafe_methods: true,
+                    unsafe_proto: true,
+                    unsafe_regexp: true,
+                    unsafe_undefined: true,
+                    global_defs: rc.exportTerserDefine(),
+                },
+                mangle: {
+                    properties: {
+                        keep_quoted: 'strict',
+                    },
+                },
+                format: {
+                    comments: false,
+                },
+            })
+                .then(e => fs.promises.writeFile(`dist/c20p1305-wasm.${optimizeMode}.${moduleFormat}.min.js`, e.code))
+                .catch(console.log),
+        ]);
+    }));
+    await Promise.all([
+        fs.promises.copyFile('src/c20p1305-wasm-template.d.ts', `dist/c20p1305-wasm.${optimizeMode}.d.ts`),
+        fs.promises.copyFile('src/c20p1305-wasm-template.d.ts', `dist/c20p1305-wasm.${optimizeMode}.min.d.ts`),
+    ]);
 }));
 
 })();

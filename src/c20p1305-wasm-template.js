@@ -1,5 +1,3 @@
-(() => {
-
 /** @type {globalThis} */
 const GLOBAL = typeof globalThis !== 'undefined' ? globalThis : (global || self);
 
@@ -23,17 +21,17 @@ const $memoryCryptContextLength = 336;
 /** @type {WebAssembly.Exports} */
 /**
  * @type {{
- *  $$WASMEXPORTS_c20p1305_ctx_init$$(ctx: Pointer, key: Pointer, nonce: Pointer, auth: Pointer, authLength: Number) => void,
- *  $$WASMEXPORTS_c20p1305_encrypt$$(ctx: Pointer, data: Pointer, dataLength: Number) => void,
- *  $$WASMEXPORTS_c20p1305_decrypt$$(ctx: Pointer, data: Pointer, dataLength: Number) => void,
- *  $$WASMEXPORTS_c20p1305_finish$$(ctx: Pointer, mac: Pointer) => void,
+ *  __WASMEXPORTS_c20p1305_ctx_init__(ctx: Pointer, key: Pointer, nonce: Pointer, auth: Pointer, authLength: Number) => void,
+ *  __WASMEXPORTS_c20p1305_encrypt__(ctx: Pointer, data: Pointer, dataLength: Number) => void,
+ *  __WASMEXPORTS_c20p1305_decrypt__(ctx: Pointer, data: Pointer, dataLength: Number) => void,
+ *  __WASMEXPORTS_c20p1305_finish__(ctx: Pointer, mac: Pointer) => void,
  * }}
  */
 let wasmExports;
 /** @type {Promise<void>} */
 const wasmReady = new Promise(resolve => WebAssembly
     .instantiate(
-        Uint8Array.from(atob('$$WASM_BASE64$$'), e => e.charCodeAt()),
+        Uint8Array.from(atob(__WASM_BASE64__), e => e.charCodeAt()),
         {
             'env': {
                 'memory': wasmMemory,
@@ -64,7 +62,7 @@ class ChaCha20Poly1305 {
         wasmHeapU8.set(key, $memoryFreeArea);
         wasmHeapU8.set(nonce, $memoryFreeArea + 32);
         wasmHeapU8.set(aad, $memoryFreeArea + 32 + 12);
-        wasmExports['$$WASMEXPORTS_c20p1305_ctx_init$$'](
+        wasmExports[__WASMEXPORTS_c20p1305_ctx_init__](
             $memoryCryptContext,
             $memoryFreeArea,
             $memoryFreeArea + 32,
@@ -109,7 +107,7 @@ class ChaCha20Poly1305 {
      * @returns {Uint8Array}
      */
     'encrypt'(data) {
-        return this.crypt(wasmExports['$$WASMEXPORTS_c20p1305_encrypt$$'], data);
+        return this.crypt(wasmExports[__WASMEXPORTS_c20p1305_encrypt__], data);
     }
 
     /**
@@ -117,7 +115,7 @@ class ChaCha20Poly1305 {
      * @returns {Uint8Array}
      */
     'decrypt'(data) {
-        return this.crypt(wasmExports['$$WASMEXPORTS_c20p1305_decrypt$$'], data);
+        return this.crypt(wasmExports[__WASMEXPORTS_c20p1305_decrypt__], data);
     }
 
     /**
@@ -125,7 +123,7 @@ class ChaCha20Poly1305 {
      */
     'mac'() {
         this.loadContext();
-        wasmExports['$$WASMEXPORTS_c20p1305_finish$$']($memoryCryptContext, $memoryFreeArea);
+        wasmExports[__WASMEXPORTS_c20p1305_finish__]($memoryCryptContext, $memoryFreeArea);
         return wasmHeapU8.slice($memoryFreeArea, $memoryFreeArea + 16);
     }
 
@@ -144,11 +142,3 @@ class ChaCha20Poly1305 {
 }
 
 ChaCha20Poly1305['ready'] = wasmReady;
-
-if (typeof module !== 'undefined') {
-    module.exports = ChaCha20Poly1305;
-} else {
-    GLOBAL['ChaCha20Poly1305'] = ChaCha20Poly1305;
-}
-
-})()

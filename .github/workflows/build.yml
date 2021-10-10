@@ -18,9 +18,13 @@ jobs:
         uses: mymindstorm/setup-emsdk@v7
         with:
           version: latest
-          no-cache: true
+      - name: Cache dependencies
+        uses: actions/cache@v2
+        with:
+          path: ~/.npm
+          key: ${{ runner.os }}-node-${{ hashFiles('**/package.json') }}
       - name: Install dependencies
-        run: npm install -g terser
+        run: npm install
       - name: Build wasm-c20p1305
         run: node build.js
       - name: Test and benchmark
