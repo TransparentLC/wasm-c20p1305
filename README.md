@@ -138,7 +138,7 @@ console.log(plaintext.every((e, i) => e === decrypted[i]));
 需要安装 [Emscripten](https://emscripten.org) 和 [Node.js](https://nodejs.org) 环境。
 
 ```bash
-npm install terser
+npm install
 node build.js
 ```
 
@@ -147,8 +147,7 @@ node build.js
 * `c20p1305.{mode}.wasm`
 * `c20p1305-wasm.{mode}.{moduleFormat}.js`
 * `c20p1305-wasm.{mode}.{moduleFormat}.min.js`
-* `c20p1305-wasm.{mode}.d.ts`
-* `c20p1305-wasm.{mode}.min.d.ts`
+* `c20p1305-wasm.d.ts`
 
 `{mode}` 是 size 和 speed 之一，对应文件大小或运行速度的优化（也就是 Emscripten 编译时使用的 `-Oz` 或 `-O3` 参数）。`{moduleFormat}` 是 `cjs` 和 `esm` 之一，分别对应 CommonJS 和 ES Modules 模块。使用时在浏览器 / Node.js 中加载 JS 文件即可，WASM 文件可以不保留。
 

@@ -9,6 +9,7 @@ await fs.promises.rmdir('dist', { recursive: true });
 await fs.promises.mkdir('dist');
 
 const template = await fs.promises.readFile('src/c20p1305-wasm-template.js', { encoding: 'utf-8' });
+await fs.promises.copyFile('src/c20p1305-wasm-template.d.ts', `dist/c20p1305-wasm.${optimizeMode}.d.ts`);
 
 await Promise.all([
     // ['simd', '-O3', '-msimd128', '-DWASM_SIMD_COMPAT_SLOW'],
@@ -85,10 +86,6 @@ await Promise.all([
                 .catch(console.log),
         ]);
     }));
-    await Promise.all([
-        fs.promises.copyFile('src/c20p1305-wasm-template.d.ts', `dist/c20p1305-wasm.${optimizeMode}.d.ts`),
-        fs.promises.copyFile('src/c20p1305-wasm-template.d.ts', `dist/c20p1305-wasm.${optimizeMode}.min.d.ts`),
-    ]);
 }));
 
 })();
