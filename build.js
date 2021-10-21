@@ -15,6 +15,7 @@ const emccPath = (await new Promise((resolve, reject) => childProcess.execFile(
 ))).split('\n').map(e => e.trim())[0];
 const wasmdisPath = emccPath + '/../../bin/wasm-dis';
 const wasmoptPath = emccPath + '/../../bin/wasm-opt';
+console.log(emccPath, wasmdisPath, wasmoptPath);
 
 const template = await fs.promises.readFile('src/c20p1305-wasm-template.js', { encoding: 'utf-8' });
 await fs.promises.copyFile('src/c20p1305-wasm-template.d.ts', 'dist/c20p1305-wasm.d.ts');
