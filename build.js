@@ -30,17 +30,15 @@ await Promise.all([
     const rc = new ReplacementCollector(/__.+?__/g, {
         __WASM_BASE64__: null,
     });
+    const wasmSource = (await fs.promises.readdir('src/wasm')).filter(e => path.extname(e) === '.c').map(e => `src/wasm/${e}`);
     await Promise.all([
-        'src/wasm/c20p1305.c',
+        ...wasmSource,
         'src/c20p1305-wasm-template.js',
     ].map(f => fs.promises.readFile(f, { encoding: 'utf-8' }).then(e => rc.collect(e))));
 
     // Compile WASM file
     const emccArgs = [
-        'src/wasm/c20p1305.c',
-        'src/wasm/chacha20.c',
-        'src/wasm/memset.c',
-        'src/wasm/poly1305-donna.c',
+        ...wasmSource,
         optimizeParam,
         ...otherParam,
         '-v',
