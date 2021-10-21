@@ -28,15 +28,16 @@ const $memoryCryptContextLength = 336;
  * }}
  */
 let wasmExports;
+
 /** @type {Promise<void>} */
 const wasmReady = new Promise(resolve => WebAssembly
     .instantiate(
-        Uint8Array.from(atob(__WASM_BASE64__), e => e.charCodeAt()),
+        Uint8Array.from(atob('__WASM_BASE64__'), e => e.charCodeAt()),
         {
-            'env': {
-                'memory': wasmMemory,
-                '__memory_base': 0x0000,
-                '__stack_pointer': new WebAssembly.Global(
+            '__env__': {
+                '__memory__': wasmMemory,
+                '____memory_base__': 0x0000,
+                '____stack_pointer__': new WebAssembly.Global(
                     {
                         'mutable': true,
                         'value': 'i32',
@@ -62,7 +63,7 @@ class ChaCha20Poly1305 {
         wasmHeapU8.set(key, $memoryFreeArea);
         wasmHeapU8.set(nonce, $memoryFreeArea + 32);
         wasmHeapU8.set(aad, $memoryFreeArea + 32 + 12);
-        wasmExports[__WASMEXPORTS_c20p1305_ctx_init__](
+        wasmExports['__WASMEXPORTS_c20p1305_ctx_init__'](
             $memoryCryptContext,
             $memoryFreeArea,
             $memoryFreeArea + 32,
@@ -107,7 +108,7 @@ class ChaCha20Poly1305 {
      * @returns {Uint8Array}
      */
     'encrypt'(data) {
-        return this.crypt(wasmExports[__WASMEXPORTS_c20p1305_encrypt__], data);
+        return this.crypt(wasmExports['__WASMEXPORTS_c20p1305_encrypt__'], data);
     }
 
     /**
@@ -115,7 +116,7 @@ class ChaCha20Poly1305 {
      * @returns {Uint8Array}
      */
     'decrypt'(data) {
-        return this.crypt(wasmExports[__WASMEXPORTS_c20p1305_decrypt__], data);
+        return this.crypt(wasmExports['__WASMEXPORTS_c20p1305_decrypt__'], data);
     }
 
     /**
@@ -123,7 +124,7 @@ class ChaCha20Poly1305 {
      */
     'mac'() {
         this.loadContext();
-        wasmExports[__WASMEXPORTS_c20p1305_finish__]($memoryCryptContext, $memoryFreeArea);
+        wasmExports['__WASMEXPORTS_c20p1305_finish__']($memoryCryptContext, $memoryFreeArea);
         return wasmHeapU8.slice($memoryFreeArea, $memoryFreeArea + 16);
     }
 

@@ -8,6 +8,14 @@ const ReplacementCollector = require('./src/replacement-collector.js');
 await fs.promises.rm('dist', { recursive: true, force: true });
 await fs.promises.mkdir('dist');
 
+/** @type {String} */
+const emccPath = (await new Promise((resolve, reject) => childProcess.execFile(
+    'where', ['emcc'],
+    (error, stdout, stderr) => error ? reject(error) : resolve(stdout)
+))).split('\n').map(e => e.trim())[0];
+const wasmdisPath = emccPath + '/../../bin/wasm-dis';
+const wasmoptPath = emccPath + '/../../bin/wasm-opt';
+
 const template = await fs.promises.readFile('src/c20p1305-wasm-template.js', { encoding: 'utf-8' });
 await fs.promises.copyFile('src/c20p1305-wasm-template.d.ts', 'dist/c20p1305-wasm.d.ts');
 
@@ -26,6 +34,7 @@ await Promise.all([
         'src/c20p1305-wasm-template.js',
     ].map(f => fs.promises.readFile(f, { encoding: 'utf-8' }).then(e => rc.collect(e))));
 
+    // Compile WASM file
     const emccArgs = [
         'src/wasm/c20p1305.c',
         'src/wasm/chacha20.c',
@@ -33,7 +42,6 @@ await Promise.all([
         'src/wasm/poly1305-donna.c',
         optimizeParam,
         ...otherParam,
-        ...rc.exportEmscriptenDefine(),
         '-v',
         '-s', 'SIDE_MODULE=2',
         '-o', `dist/c20p1305.${optimizeMode}.wasm`,
@@ -48,25 +56,37 @@ await Promise.all([
             (error, stdout, stderr) => error ? reject(error) : resolve(stderr)
         )
     ));
-    rc.mapping.set('__WASM_BASE64__', (await fs.promises.readFile(`dist/c20p1305.${optimizeMode}.wasm`, { encoding: 'base64' })).replace(/=+$/g, ''));
 
+    // Disassemble WASM to WAT and modify
+    await new Promise((resolve, reject) => childProcess.execFile(
+        wasmdisPath, ['-all', '-o', `dist/c20p1305.${optimizeMode}.wat`, `dist/c20p1305.${optimizeMode}.wasm`],
+        (error, stdout, stderr) => error ? reject(error) : resolve(stdout)
+    ));
+    let watContent = await fs.promises.readFile(`dist/c20p1305.${optimizeMode}.wat`, { encoding: 'utf-8' });
+    watContent = watContent.replace(/^\s*\(import "env" "(.+?)"/gm, '(import "__env__" "__$1__"');
+    watContent = watContent.replace(/^\s*\(export "__wasm_call_ctors" \(func \$\d+\)\)\s*$/gm, '');
+    watContent = rc.applyReplace(watContent);
+    await fs.promises.writeFile(`dist/c20p1305.${optimizeMode}.wat`, watContent);
+    await new Promise((resolve, reject) => childProcess.execFile(
+        wasmoptPath, [
+            '-all',
+            '-O0',
+            '--remove-unused-module-elements',
+            '-o', `dist/c20p1305.${optimizeMode}.wasm`,
+            `dist/c20p1305.${optimizeMode}.wat`,
+        ],
+        (error, stdout, stderr) => error ? reject(error) : resolve(stdout)
+    ));
+    rc.mapping.set('__WASM_BASE64__', (await fs.promises.readFile(`dist/c20p1305.${optimizeMode}.wasm`, { encoding: 'base64' })).replace(/=+$/g, ''));
+    await fs.promises.rm(`dist/c20p1305.${optimizeMode}.wat`);
+
+    // Compile JS file
     await Promise.all(['cjs', 'esm'].map(async moduleFormat => {
-        const wrappedTemplate = (await fs.promises.readFile(`src/wrapper/${moduleFormat}.js`, { encoding: 'utf-8' })).replace(/\/\*\* TEMPLATE \*\*\//g, template);
+        const wrappedTemplate = rc.applyReplace(
+            (await fs.promises.readFile(`src/wrapper/${moduleFormat}.js`, { encoding: 'utf-8' })).replace(/\/\*\* TEMPLATE \*\*\//g, template)
+        );
         return Promise.all([
-            terser.minify(wrappedTemplate, {
-                ecma: 2020,
-                compress: {
-                    defaults: false,
-                    global_defs: rc.exportTerserDefine(),
-                },
-                mangle: false,
-                format: {
-                    beautify: true,
-                    comments: 'all',
-                },
-            })
-                .then(e => fs.promises.writeFile(`dist/c20p1305-wasm.${optimizeMode}.${moduleFormat}.js`, e.code))
-                .catch(console.log),
+            fs.promises.writeFile(`dist/c20p1305-wasm.${optimizeMode}.${moduleFormat}.js`, wrappedTemplate),
             terser.minify(wrappedTemplate, {
                 ecma: 2020,
                 module: moduleFormat === 'esm',
@@ -77,7 +97,6 @@ await Promise.all([
                     unsafe_proto: true,
                     unsafe_regexp: true,
                     unsafe_undefined: true,
-                    global_defs: rc.exportTerserDefine(),
                 },
                 mangle: {
                     properties: {
