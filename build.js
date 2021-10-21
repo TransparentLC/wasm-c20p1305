@@ -13,6 +13,7 @@ const emccPath = (await new Promise((resolve, reject) => childProcess.execFile(
     'where', ['emcc'],
     (error, stdout, stderr) => error ? reject(error) : resolve(stdout)
 ))).split('\n').map(e => e.trim())[0];
+console.log(emccPath);
 const wasmdisPath = emccPath + '/../../bin/wasm-dis';
 const wasmoptPath = emccPath + '/../../bin/wasm-opt';
 
