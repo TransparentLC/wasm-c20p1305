@@ -1,5 +1,6 @@
 const childProcess = require('child_process');
 const fs = require('fs');
+const path = require('path');
 const terser = require('terser');
 const ReplacementCollector = require('./src/replacement-collector.js');
 
@@ -13,9 +14,8 @@ const emccPath = (await new Promise((resolve, reject) => childProcess.execFile(
     process.platform === 'win32' ? 'where' : 'which', ['emcc'],
     (error, stdout, stderr) => error ? reject(error) : resolve(stdout)
 ))).split('\n').map(e => e.trim())[0];
-const wasmdisPath = emccPath + '/../../bin/wasm-dis';
-const wasmoptPath = emccPath + '/../../bin/wasm-opt';
-console.log(emccPath, wasmdisPath, wasmoptPath);
+const wasmdisPath = path.dirname(emccPath) + '/../bin/wasm-dis';
+const wasmoptPath = path.dirname(emccPath) + '/../bin/wasm-opt';
 
 const template = await fs.promises.readFile('src/c20p1305-wasm-template.js', { encoding: 'utf-8' });
 await fs.promises.copyFile('src/c20p1305-wasm-template.d.ts', 'dist/c20p1305-wasm.d.ts');
