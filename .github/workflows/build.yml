@@ -27,7 +27,9 @@ jobs:
       - name: Install dependencies
         run: npm install
       - name: Build wasm-c20p1305
-        run: node build.js
+        run: |
+          node build.js
+          ls -l dist
       - name: Test and benchmark
         run: node benchmark.js
       - name: Upload result
